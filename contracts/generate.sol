@@ -40,9 +40,6 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
     address payable public treasury;
     address public verifier;
 
-    mapping(address => bool) public mainReferrals;
-    // secondReferral => mainReferral
-    mapping(address => address) public referralPairs;
     mapping(address => uint) public referralEarnings;
 
     mapping(address => uint) public lockedEntriesCount;
@@ -68,8 +65,7 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
     uint public constant percentageDivider = 1000; // 100%
     address[] public swapPath;
 
-    event Generated(address indexed sender, uint index, address referral);
-    event RegisteredReferral(address indexed mainReferral, address indexed secondReferral);
+    event Generated(address indexed sender, uint index, address referral1, address referral2);
 
     constructor(address verifierAddress, address syncerAddress, address payable treasuryAddress, address ctnmAddress, address usdAddress, address routerAddress) {
         verifier = verifierAddress;
@@ -104,8 +100,8 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
 
     receive() external payable {}
 
-    function generate(uint ctnmUsdPriceOracle, uint deadline, address referral, uint slippage, bytes memory signature)
-        whenNotPaused nonReentrant payable external {
+    function generate(uint ctnmUsdPriceOracle, uint deadline, address referral1, address referral2, uint slippage, bytes memory signature)
+    whenNotPaused nonReentrant payable external {
         require(slippage <= (percentageDivider / 5), "Wrong slippage value");
         require(msg.value > 5e15 wei, "Value less than min value");
         require(blackListed[_msgSender()] == false, "User is blacklisted");
@@ -114,11 +110,9 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
         require(block.timestamp <= deadline, "Deadline has passed");
 
         // The referral must be valid
-        bool isMainReferral = mainReferrals[referral];
-        address referralPair = referralPairs[referral];
-        require(isMainReferral || referralPair != address(0), "Cannot generate without a valid referral");
+        require(referral1 != address(0), "Cannot generate without a valid referral1");
 
-        bytes32 messageHash = keccak256(abi.encode(block.chainid, address(this), address(ctnm), deadline, ctnmUsdPriceOracle, _msgSender()));
+        bytes32 messageHash = keccak256(abi.encode(block.chainid, address(this), address(ctnm), deadline, referral1, referral2, ctnmUsdPriceOracle, _msgSender()));
         messageHash = messageHash.toEthSignedMessageHash();
         address signer = messageHash.recover(signature);
         require(signer == verifier, "wrong signature");
@@ -143,13 +137,10 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
 
         // Referral logic
 
-        if (isMainReferral) {
+        if (referral2 == address(0)) {
             // In this case we send the 10% to the mainReferral
             mainReferralAmount += secondReferralAmount;
             secondReferralAmount = 0;
-        } else if (mainReferrals[referralPair] == false) {
-            // There is a case when the mainReferral is not active anymore and we redirect the funds to treasury
-            mainReferralAmount = 0;
         }
         // Otherwise it means that a valid secondReferral was used and the amounts don't change
 
@@ -171,38 +162,22 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
 
         // We do not require a success call as one of the referrals could DoS the contract
         if (mainReferralAmount > 0) {
-            (bool sent, ) = payable(referralPair).call{value: mainReferralAmount}(new bytes(0));
+            (bool sent, ) = payable(referral1).call{value: mainReferralAmount}(new bytes(0));
             if (sent) {
-                referralEarnings[referralPair] += mainReferralAmount;
+                referralEarnings[referral1] += mainReferralAmount;
             }
         }
         if (secondReferralAmount > 0) {
-            (bool sent, ) = payable(referral).call{value: secondReferralAmount}(new bytes(0));
+            (bool sent, ) = payable(referral2).call{value: secondReferralAmount}(new bytes(0));
             if (sent) {
-                referralEarnings[referral] += secondReferralAmount;
+                referralEarnings[referral2] += secondReferralAmount;
             }
         }
 
         // Some spare wei might exist and we send them all
         treasury.call{value: address(this).balance}(new bytes(0));
 
-        emit Generated(_msgSender(), index, referral);
-    }
-
-    function registerSecondReferral(address mainReferral) external {
-        require(mainReferrals[mainReferral] == true, "Specified address is not a main referral");
-        require(referralPairs[_msgSender()] == address(0), "Referral is already set");
-        referralPairs[_msgSender()] = mainReferral;
-        emit RegisteredReferral(mainReferral, _msgSender());
-    }
-
-    // Setters
-
-    function setMainReferrals(address[] memory referrals, bool[] memory values) onlyRole(SYNCER_ROLE) external {
-        require(referrals.length == values.length, "Arrays lengths do not match");
-        for(uint i = 0; i < referrals.length; i++) {
-            mainReferrals[referrals[i]] = values[i];
-        }
+        emit Generated(_msgSender(), index, referral1, referral2);
     }
 
     function setPause(bool value) onlyRole(SYNCER_ROLE) external {
