@@ -103,7 +103,7 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
     function generate(uint ctnmUsdPriceOracle, uint deadline, address referral1, address referral2, uint slippage, bytes memory signature)
     whenNotPaused nonReentrant payable external {
         require(slippage <= (percentageDivider / 5), "Wrong slippage value");
-        require(msg.value > 5e15 wei, "Value less than min value");
+        require(msg.value >= 5e15 wei, "Value less than min value");
         require(blackListed[_msgSender()] == false, "User is blacklisted");
         // This ensures that that msg sender is an EOA and not a smart contract
         require(_msgSender() == tx.origin, "Sender is not an EOA");
