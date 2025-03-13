@@ -51,6 +51,7 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
     uint public mainReferralPercentage;
     uint public secondReferralPercentage;
     uint public treasuryPercentage;
+    uint public constant maxReferralPercentagesSum = 200; // 20%
 
     IUniswapV2Router02 immutable public router;
     IUniswapV2Factory immutable public factory;
@@ -211,7 +212,9 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function setPercentages(uint liqP, uint mainReferralP, uint secondReferralP, uint treasuryP) onlyRole(SYNCER_ROLE) external {
-        uint sum = liqP + mainReferralP + secondReferralP + treasuryP;
+        uint sum = mainReferralP + secondReferralP;
+        require(sum <= maxReferralPercentagesSum, "Referral percentages sum cannot exceed 20%");
+        sum += (liqP + treasuryP);
         require(sum == percentageDivider, "Percentage sum is not 1000");
         liqPercentage = liqP;
         mainReferralPercentage = mainReferralP;
