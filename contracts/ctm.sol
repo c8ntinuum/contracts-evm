@@ -5,11 +5,11 @@ pragma solidity ^0.8.27;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract CTNM is ERC20, AccessControl {
+contract CTM is ERC20, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint public constant maxSupply = 8888888888 ether;
 
-    constructor() ERC20("C8NTINUUM", "CTNM") {
+    constructor() ERC20("C8NTINUUM", "CTM") {
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
