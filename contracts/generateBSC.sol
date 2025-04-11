@@ -21,15 +21,15 @@ interface ICtmERC20 is IERC20 {
     function maxSupply() external view returns (uint);
 }
 
-    struct UnlockInfo {
-        uint256 weiAmount;
-        uint256 weiAmountInUsd;
-        uint256 ctmUsdPriceOracle;
-        uint256 ctmUsdPricePool;
-        uint256 timestamp;
-    }
+struct UnlockInfo {
+    uint256 weiAmount;
+    uint256 weiAmountInUsd;
+    uint256 ctmUsdPriceOracle;
+    uint256 ctmUsdPricePool;
+    uint256 timestamp;
+}
 
-contract Generate is AccessControl, Pausable, ReentrancyGuard {
+contract GenerateBSC is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for ICtmERC20;
     using MessageHashUtils for bytes32;
     using ECDSA for bytes32;
@@ -60,7 +60,7 @@ contract Generate is AccessControl, Pausable, ReentrancyGuard {
     IUniswapV2Pair public wEthUsdPair;
     IUniswapV2Pair public wEthCtmPair;
 
-    uint public constant minFloorGenerationPriceUsd = 22400; // 0.0224 * 10^6 -> 0.0224$
+    uint public constant minFloorGenerationPriceUsd = 22400000000000000; // 0.0224 * 10^18 -> 0.0224$
     uint public globalGenerationPriceUsd = minFloorGenerationPriceUsd;
     uint public constant oneCtm = 1 * 1e18;
     uint public constant percentageDivider = 1000; // 100%
