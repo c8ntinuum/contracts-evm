@@ -9,7 +9,7 @@ contract CTM is ERC20, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint public constant maxSupply = 8888888888 ether;
 
-    constructor() ERC20("C8NTINUUM", "CTM") {
+    constructor() ERC20("c8ntinuum", "CTM") {
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
